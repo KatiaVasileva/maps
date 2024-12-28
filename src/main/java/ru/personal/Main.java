@@ -23,12 +23,13 @@ public class Main {
                 "start", COORDINATES_A,
                 "end", COORDINATES_B
         ));
-        System.out.println(response);
 
         String searchResponse = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", ADDRESS_A,
                 "format", "json"
         ));
+
+        System.out.println(response);
         System.out.println(searchResponse);
     }
 
