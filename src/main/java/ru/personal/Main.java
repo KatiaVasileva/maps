@@ -29,7 +29,8 @@ public class Main {
                 "format", "json"
         ));
 
-        final Type type = new TypeToken<List<Map<String, Object>>>() {}.getType();
+        final Type type = new TypeToken<List<Map<String, Object>>>() {
+        }.getType();
         final List<Map<String, Object>> parsedLocationA = GSON.fromJson(locationAJson, type);
         final Map<String, Object> addressAInfo = parsedLocationA.get(0);
         String coordinatesA = addressAInfo.get("lon").toString() + "," + addressAInfo.get("lat").toString();
@@ -49,9 +50,16 @@ public class Main {
                 "start", coordinatesA,
                 "end", coordinatesB
         ));
-        System.out.println(routeJson);
         final JsonObject routeInfo = GSON.fromJson(routeJson, JsonObject.class);
-        System.out.println(routeInfo);
+        final JsonObject routeSegment = routeInfo.getAsJsonArray("features")
+                .get(0)
+                .getAsJsonObject()
+                .getAsJsonObject("properties")
+                .getAsJsonArray("segments")
+                .get(0)
+                .getAsJsonObject();
+        System.out.println(routeSegment.getAsJsonPrimitive("distance"));
+        System.out.println(routeSegment.getAsJsonPrimitive("duration"));
     }
 
     static String doGetRequest(final String url, final Map<String, String> queryParams) throws IOException, URISyntaxException {
@@ -66,13 +74,12 @@ public class Main {
         StringBuilder response = new StringBuilder();
         while (scanner.hasNext()) {
             response.append(scanner.nextLine());
-
         }
         return response.toString();
     }
 
     static String buildQueryParams(final Map<String, String> queryParams) {
-        if(queryParams.isEmpty()) {
+        if (queryParams.isEmpty()) {
             return "";
         }
         List<String> formattedParams = new ArrayList<>();
@@ -80,7 +87,7 @@ public class Main {
             formattedParams.add(String.format("%s=%s", param.getKey(), URLEncoder.encode(param.getValue(), StandardCharsets.UTF_8)));
         }
         final StringBuilder stringBuilder = new StringBuilder("?");
-        for(int i = 0; i < formattedParams.size(); i++) {
+        for (int i = 0; i < formattedParams.size(); i++) {
             final String param = formattedParams.get(i);
             stringBuilder.append(i != 0 ? "&" : "").append(param);
         }
