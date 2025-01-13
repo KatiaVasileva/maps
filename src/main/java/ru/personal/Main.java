@@ -24,12 +24,13 @@ public class Main {
     private static final Gson GSON = new Gson();
 
     public static void main(String[] args) throws URISyntaxException, IOException {
+        // Запрос GET для получения json, который представляет собой результат пробразования адреса (точка отправления) в координаты
         String locationAJson
                 = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", ADDRESS_A,
                 "format", "json"
         ));
-
+        // Обработка полученного json для извлечения из него полей "lon" (долготоа) и "lat" (широта)
         final Type type = new TypeToken<List<Map<String, Object>>>() {
         }.getType();
         final List<Map<String, Object>> parsedLocationA = GSON.fromJson(locationAJson, type);
@@ -37,20 +38,24 @@ public class Main {
         String coordinatesA = addressAInfo.get("lon").toString() + "," + addressAInfo.get("lat").toString();
         System.out.println(coordinatesA);
 
+        // Запрос GET для получения json, который представляет собой результат пробразования адреса (точка прибытия) в координаты
         String locationBJson = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", ADDRESS_B,
                 "format", "json"
         ));
+        // Обработка полученного json для извлечения из него полей "lon" (долготоа) и "lat" (широта)
         final List<Map<String, Object>> parsedLocationB = GSON.fromJson(locationBJson, type);
         final Map<String, Object> addressBInfo = parsedLocationB.get(0);
         String coordinatesB = addressBInfo.get("lon").toString() + "," + addressBInfo.get("lat").toString();
         System.out.println(coordinatesB);
 
+        // Запрос GET для получения маршрута по указанным координатам исходной и конеченой точек
         String routeJson = doGetRequest(ORS_URL, Map.of(
                 "api_key", API_KEY,
                 "start", coordinatesA,
                 "end", coordinatesB
         ));
+        // Обработка geojson для извлечения из него информации в полях distance и duration
         final JsonObject routeInfo = GSON.fromJson(routeJson, JsonObject.class);
         final JsonObject routeSegment = routeInfo.getAsJsonArray("features")
                 .get(0)
@@ -62,6 +67,7 @@ public class Main {
         System.out.println(routeSegment.getAsJsonPrimitive("distance"));
         System.out.println(routeSegment.getAsJsonPrimitive("duration"));
 
+        // Обработка geojson для извлечения из него информации в поле steps
         for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
             System.out.println(step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString());
             System.out.println(step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString());
@@ -70,6 +76,7 @@ public class Main {
 
     }
 
+    // Метод для создания соединения и выполнения GET-запроса, который возвращает ответ в виде строки
     static String doGetRequest(final String url, final Map<String, String> queryParams) throws IOException, URISyntaxException {
         final String paramString = buildQueryParams(queryParams);
 
@@ -86,6 +93,7 @@ public class Main {
         return response.toString();
     }
 
+    // Метод для создания строки запроса с нужными параметрами
     static String buildQueryParams(final Map<String, String> queryParams) {
         if (queryParams.isEmpty()) {
             return "";
