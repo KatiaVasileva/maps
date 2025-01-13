@@ -1,36 +1,57 @@
 package ru.personal;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 public class Main {
 
-    private static final String API_KEY = "5b3ce3597851110001cf6248269b19a89dfc4f20970575c9fcfd37db";
-    private static final String COORDINATES_A = "60.622083893794525,56.90695817776867";
-    private static final String COORDINATES_B = "60.65373517379274,56.83601410312533";
     private static final String ADDRESS_A = "Екатеринбург, улица Мира 33";
+    private static final String ADDRESS_B = "Екатеринбург, улица Шефская 108";
+
+    private static final String API_KEY = "5b3ce3597851110001cf6248269b19a89dfc4f20970575c9fcfd37db";
     private static final String ORS_URL = "https://api.openrouteservice.org/v2/directions/driving-car";
     private static final String OSM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+    private static final String OSM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
+
+    private static final Gson GSON = new Gson();
 
     public static void main(String[] args) throws URISyntaxException, IOException {
-        String response = doGetRequest(ORS_URL, Map.of(
-                "api_key", API_KEY,
-                "start", COORDINATES_A,
-                "end", COORDINATES_B
-        ));
-
-        String searchResponse = doGetRequest(OSM_SEARCH_URL, Map.of(
+        String locationAJson
+                = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", ADDRESS_A,
                 "format", "json"
         ));
 
-        System.out.println(response);
-        System.out.println(searchResponse);
+        final Type type = new TypeToken<List<Map<String, Object>>>() {}.getType();
+        final List<Map<String, Object>> parsedLocationA = GSON.fromJson(locationAJson, type);
+        final Map<String, Object> addressAInfo = parsedLocationA.get(0);
+        String coordinatesA = addressAInfo.get("lon").toString() + "," + addressAInfo.get("lat").toString();
+        System.out.println(coordinatesA);
+
+        String locationBJson = doGetRequest(OSM_SEARCH_URL, Map.of(
+                "q", ADDRESS_B,
+                "format", "json"
+        ));
+        final List<Map<String, Object>> parsedLocationB = GSON.fromJson(locationBJson, type);
+        final Map<String, Object> addressBInfo = parsedLocationB.get(0);
+        String coordinatesB = addressBInfo.get("lon").toString() + "," + addressBInfo.get("lat").toString();
+        System.out.println(coordinatesB);
+
+        String routeJson = doGetRequest(ORS_URL, Map.of(
+                "api_key", API_KEY,
+                "start", coordinatesA,
+                "end", coordinatesB
+        ));
+        System.out.println(routeJson);
+        final JsonObject routeInfo = GSON.fromJson(routeJson, JsonObject.class);
+        System.out.println(routeInfo);
     }
 
     static String doGetRequest(final String url, final Map<String, String> queryParams) throws IOException, URISyntaxException {
