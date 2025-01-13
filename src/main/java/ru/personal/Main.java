@@ -1,6 +1,7 @@
 package ru.personal;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
@@ -60,6 +61,13 @@ public class Main {
                 .getAsJsonObject();
         System.out.println(routeSegment.getAsJsonPrimitive("distance"));
         System.out.println(routeSegment.getAsJsonPrimitive("duration"));
+
+        for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
+            System.out.println(step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString());
+            System.out.println(step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString());
+            System.out.println(step.getAsJsonObject().getAsJsonPrimitive("instruction").getAsString());
+        }
+
     }
 
     static String doGetRequest(final String url, final Map<String, String> queryParams) throws IOException, URISyntaxException {
