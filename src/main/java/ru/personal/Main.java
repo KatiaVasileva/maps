@@ -1,7 +1,6 @@
 package ru.personal;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -27,14 +26,14 @@ public class Main {
         String coordinatesB = getCoordinates(ADDRESS_B);
 
         // Запрос GET для получения маршрута по указанным координатам исходной и конечной точек
-        String routeJson = doGetRequest(ORS_URL, Map.of(
+        // Обработка полученного JsonElement для извлечения из него информации в полях distance и duration
+        JsonObject routeSegment = doGetRequest(ORS_URL, Map.of(
                 "api_key", API_KEY,
                 "start", coordinatesA,
                 "end", coordinatesB
-        ));
-        // Обработка geojson для извлечения из него информации в полях distance и duration
-        final JsonObject routeInfo = GSON.fromJson(routeJson, JsonObject.class);
-        final JsonObject routeSegment = routeInfo.getAsJsonArray("features")
+        ))
+                .getAsJsonObject()
+                .getAsJsonArray("features")
                 .get(0)
                 .getAsJsonObject()
                 .getAsJsonObject("properties")
@@ -44,7 +43,19 @@ public class Main {
         System.out.println(routeSegment.getAsJsonPrimitive("distance"));
         System.out.println(routeSegment.getAsJsonPrimitive("duration"));
 
-        // Обработка geojson для извлечения из него информации в поле steps
+        // Обработка JsonObject routeSegment для извлечения из него информации в поле steps
+        // Структура routeSegment:
+        // {
+        //    "distance":10566.9,
+        //    "duration":976.2,
+        //    "steps":[
+        //        {"distance":54.7,
+        //        "duration":13.1,
+        //        "type":11,
+        //        "instruction":"Head south","name":"-",
+        //        "way_points":[0,3]}
+        //     ]
+        //  }
         for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
             System.out.println(step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString());
             System.out.println(step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString());
@@ -53,7 +64,7 @@ public class Main {
     }
 
     // Метод для создания соединения и выполнения GET-запроса, который возвращает ответ в виде строки
-    static String doGetRequest(final String url, final Map<String, String> queryParams) throws IOException, URISyntaxException {
+    static JsonElement doGetRequest(final String url, final Map<String, String> queryParams) throws IOException, URISyntaxException {
         final String paramString = buildQueryParams(queryParams);
 
         final HttpURLConnection connection = (HttpURLConnection) new URI(url + paramString).toURL().openConnection();
@@ -66,7 +77,7 @@ public class Main {
         while (scanner.hasNext()) {
             response.append(scanner.nextLine());
         }
-        return response.toString();
+        return GSON.fromJson(response.toString(), JsonElement.class);
     }
 
     // Метод для создания строки запроса с нужными параметрами
@@ -88,15 +99,14 @@ public class Main {
 
     // Метод для выполнения GET-запроса, который принимает адрес и возвращает координаты этого адреса в виде строки
     static String getCoordinates(String address) throws IOException, URISyntaxException {
-        String locationJson = doGetRequest(OSM_SEARCH_URL, Map.of(
+        JsonObject addressInfo = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", address,
                 "format", "json"
-        ));
-        // Обработка полученного json для извлечения из него полей "lon" (долгота) и "lat" (широта)
-        final JsonArray parsedLocation = GSON.fromJson(locationJson, JsonArray.class);
-        final JsonObject addressInfo = parsedLocation.get(0).getAsJsonObject();
-        String coordinates = addressInfo.getAsJsonPrimitive("lon").getAsString()
+        ))
+                .getAsJsonArray()
+                .get(0)
+                .getAsJsonObject();
+        return addressInfo.getAsJsonPrimitive("lon").getAsString()
                 + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
-        return coordinates;
     }
 }
