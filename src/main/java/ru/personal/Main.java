@@ -1,18 +1,16 @@
 package ru.personal;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Main {
-
     private static final String ADDRESS_A = "Екатеринбург, улица Мира 33";
     private static final String ADDRESS_B = "Екатеринбург, улица Шефская 108";
 
@@ -24,32 +22,11 @@ public class Main {
     private static final Gson GSON = new Gson();
 
     public static void main(String[] args) throws URISyntaxException, IOException {
-        // Запрос GET для получения json, который представляет собой результат пробразования адреса (точка отправления) в координаты
-        String locationAJson
-                = doGetRequest(OSM_SEARCH_URL, Map.of(
-                "q", ADDRESS_A,
-                "format", "json"
-        ));
-        // Обработка полученного json для извлечения из него полей "lon" (долготоа) и "lat" (широта)
-        final Type type = new TypeToken<List<Map<String, Object>>>() {
-        }.getType();
-        final List<Map<String, Object>> parsedLocationA = GSON.fromJson(locationAJson, type);
-        final Map<String, Object> addressAInfo = parsedLocationA.get(0);
-        String coordinatesA = addressAInfo.get("lon").toString() + "," + addressAInfo.get("lat").toString();
-        System.out.println(coordinatesA);
+        // Получение координат по адресу
+        String coordinatesA = getCoordinates(ADDRESS_A);
+        String coordinatesB = getCoordinates(ADDRESS_B);
 
-        // Запрос GET для получения json, который представляет собой результат пробразования адреса (точка прибытия) в координаты
-        String locationBJson = doGetRequest(OSM_SEARCH_URL, Map.of(
-                "q", ADDRESS_B,
-                "format", "json"
-        ));
-        // Обработка полученного json для извлечения из него полей "lon" (долготоа) и "lat" (широта)
-        final List<Map<String, Object>> parsedLocationB = GSON.fromJson(locationBJson, type);
-        final Map<String, Object> addressBInfo = parsedLocationB.get(0);
-        String coordinatesB = addressBInfo.get("lon").toString() + "," + addressBInfo.get("lat").toString();
-        System.out.println(coordinatesB);
-
-        // Запрос GET для получения маршрута по указанным координатам исходной и конеченой точек
+        // Запрос GET для получения маршрута по указанным координатам исходной и конечной точек
         String routeJson = doGetRequest(ORS_URL, Map.of(
                 "api_key", API_KEY,
                 "start", coordinatesA,
@@ -73,7 +50,6 @@ public class Main {
             System.out.println(step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString());
             System.out.println(step.getAsJsonObject().getAsJsonPrimitive("instruction").getAsString());
         }
-
     }
 
     // Метод для создания соединения и выполнения GET-запроса, который возвращает ответ в виде строки
@@ -108,5 +84,19 @@ public class Main {
             stringBuilder.append(i != 0 ? "&" : "").append(param);
         }
         return stringBuilder.toString();
+    }
+
+    // Метод для выполнения GET-запроса, который принимает адрес и возвращает координаты этого адреса в виде строки
+    static String getCoordinates(String address) throws IOException, URISyntaxException {
+        String locationJson = doGetRequest(OSM_SEARCH_URL, Map.of(
+                "q", address,
+                "format", "json"
+        ));
+        // Обработка полученного json для извлечения из него полей "lon" (долгота) и "lat" (широта)
+        final JsonArray parsedLocation = GSON.fromJson(locationJson, JsonArray.class);
+        final JsonObject addressInfo = parsedLocation.get(0).getAsJsonObject();
+        String coordinates = addressInfo.getAsJsonPrimitive("lon").getAsString()
+                + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
+        return coordinates;
     }
 }
