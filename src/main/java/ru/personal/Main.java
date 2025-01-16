@@ -10,9 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Main {
-    private static final String ADDRESS_A = "Екатеринбург, улица Мира 33";
-    private static final String ADDRESS_B = "Екатеринбург, улица Шефская 108";
-
     private static final String API_KEY = "5b3ce3597851110001cf6248269b19a89dfc4f20970575c9fcfd37db";
     private static final String ORS_URL = "https://api.openrouteservice.org/v2/directions/driving-car";
     private static final String OSM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
@@ -21,9 +18,17 @@ public class Main {
     private static final Gson GSON = new Gson();
 
     public static void main(String[] args) throws URISyntaxException, IOException {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.println("Введите начальный адрес: ");
+        String addressA = scanner.nextLine();
+
+        System.out.println("Введите конечный адрес: ");
+        String addressB = scanner.nextLine();
+
         // Получение координат по адресу
-        String coordinatesA = getCoordinates(ADDRESS_A);
-        String coordinatesB = getCoordinates(ADDRESS_B);
+        String coordinatesA = getCoordinates(addressA);
+        String coordinatesB = getCoordinates(addressB);
 
         // Запрос GET для получения маршрута по указанным координатам исходной и конечной точек
         // Обработка полученного JsonElement для извлечения из него информации в полях distance и duration
@@ -40,8 +45,17 @@ public class Main {
                 .getAsJsonArray("segments")
                 .get(0)
                 .getAsJsonObject();
-        System.out.println(routeSegment.getAsJsonPrimitive("distance"));
-        System.out.println(routeSegment.getAsJsonPrimitive("duration"));
+        int distance = routeSegment.getAsJsonPrimitive("distance").getAsInt();
+        int duration = routeSegment.getAsJsonPrimitive("duration").getAsInt();
+
+        if (distance / 1000 == 0) {
+            System.out.println("Длина маршрута: " + distance + " м ");
+        } else {
+            System.out.println("Длина маршрута: " + (float) distance / 1000 + " км ");
+        }
+
+//        System.out.println("Продолжительность маршрута: " + duration / 3600 + " ч " + duration / 60 + " мин");
+        System.out.println("Продолжительность маршрута: " + duration + " c ");
 
         // Обработка JsonObject routeSegment для извлечения из него информации в поле steps
         // Структура routeSegment:
@@ -56,10 +70,15 @@ public class Main {
         //        "way_points":[0,3]}
         //     ]
         //  }
+
         for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
-            System.out.println(step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString());
-            System.out.println(step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString());
-            System.out.println(step.getAsJsonObject().getAsJsonPrimitive("instruction").getAsString());
+            String stepDuration = step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString();
+            String stepDistance = step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString();
+            String stepInstruction = step.getAsJsonObject().getAsJsonPrimitive("instruction").getAsString();
+            System.out.println("-------------------------------------");
+            System.out.println("Продолжительность шага: " + stepDuration + " c ");
+            System.out.println("Расстояние: " + stepDistance + " м ");
+            System.out.println("Маршрут: " + stepInstruction);
         }
     }
 
@@ -69,8 +88,8 @@ public class Main {
 
         final HttpURLConnection connection = (HttpURLConnection) new URI(url + paramString).toURL().openConnection();
         connection.setRequestMethod("GET");
-        System.out.println(connection.getResponseCode());
-        System.out.println(connection.getResponseMessage());
+//        System.out.println(connection.getResponseCode());
+//        System.out.println(connection.getResponseMessage());
 
         final Scanner scanner = new Scanner(connection.getInputStream());
         StringBuilder response = new StringBuilder();
