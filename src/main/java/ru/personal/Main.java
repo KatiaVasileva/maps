@@ -48,14 +48,8 @@ public class Main {
         int distance = routeSegment.getAsJsonPrimitive("distance").getAsInt();
         int duration = routeSegment.getAsJsonPrimitive("duration").getAsInt();
 
-        if (distance / 1000 == 0) {
-            System.out.println("Длина маршрута: " + distance + " м ");
-        } else {
-            System.out.println("Длина маршрута: " + (float) distance / 1000 + " км ");
-        }
-
-//        System.out.println("Продолжительность маршрута: " + duration / 3600 + " ч " + duration / 60 + " мин");
-        System.out.println("Продолжительность маршрута: " + duration + " c ");
+        System.out.println(formatDistance(distance));
+        System.out.println(formatTime(duration));
 
         // Обработка JsonObject routeSegment для извлечения из него информации в поле steps
         // Структура routeSegment:
@@ -72,12 +66,13 @@ public class Main {
         //  }
 
         for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
-            String stepDuration = step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString();
-            String stepDistance = step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString();
+            int stepDuration = step.getAsJsonObject().getAsJsonPrimitive("duration").getAsInt();
+            int stepDistance = step.getAsJsonObject().getAsJsonPrimitive("distance").getAsInt();
             String stepInstruction = step.getAsJsonObject().getAsJsonPrimitive("instruction").getAsString();
             System.out.println("-------------------------------------");
-            System.out.println("Продолжительность шага: " + stepDuration + " c ");
-            System.out.println("Расстояние: " + stepDistance + " м ");
+
+            System.out.println(formatTime(stepDuration));
+            System.out.println(formatDistance(stepDistance));
             System.out.println("Маршрут: " + stepInstruction);
         }
     }
@@ -127,5 +122,29 @@ public class Main {
                 .getAsJsonObject();
         return addressInfo.getAsJsonPrimitive("lon").getAsString()
                 + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
+    }
+
+    // Метод для форматирования полученного значения времени
+    static String formatTime (int time) {
+        String formattedTime;
+        if (time % 3600 / 60 == 0) {
+            formattedTime = "Продолжительность шага: " + time + " c ";
+        } else if (time / 3600 == 0) {
+            formattedTime = "Продолжительность шага: " + (time % 3600 / 60) + " мин ";
+        } else {
+            formattedTime = "Продолжительность маршрута: " + time / 3600 + " ч " + (time % 3600 / 60) + " мин";
+        }
+        return formattedTime;
+    }
+
+    // Метод для форматирования полученного значения расстояния
+    static String formatDistance (int distance) {
+        String formattedDistance;
+        if (distance / 1000 == 0) {
+            formattedDistance = "Расстояние: " + distance + " м ";
+        } else {
+            formattedDistance = "Расстояние: " + String.format("%.1f", (float) distance / 1000) + " км ";
+        }
+        return formattedDistance;
     }
 }
