@@ -1,6 +1,7 @@
 package ru.personal;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -27,8 +28,15 @@ public class Main {
         String addressB = scanner.nextLine();
 
         // Получение координат по адресу
-        String coordinatesA = getCoordinates(addressA);
-        String coordinatesB = getCoordinates(addressB);
+        String coordinatesA = "";
+        String coordinatesB = "";
+
+        try {
+            coordinatesA = getCoordinates(addressA);
+            coordinatesB = getCoordinates(addressB);
+        } catch (Exception e) {
+            System.out.println("Адрес не найден");
+        }
 
         // Запрос GET для получения маршрута по указанным координатам исходной и конечной точек
         // Обработка полученного JsonElement для извлечения из него информации в полях distance и duration
@@ -83,15 +91,17 @@ public class Main {
 
         final HttpURLConnection connection = (HttpURLConnection) new URI(url + paramString).toURL().openConnection();
         connection.setRequestMethod("GET");
-//        System.out.println(connection.getResponseCode());
-//        System.out.println(connection.getResponseMessage());
-
-        final Scanner scanner = new Scanner(connection.getInputStream());
-        StringBuilder response = new StringBuilder();
-        while (scanner.hasNext()) {
-            response.append(scanner.nextLine());
+        try {
+            final Scanner scanner = new Scanner(connection.getInputStream());
+            StringBuilder response = new StringBuilder();
+            while (scanner.hasNext()) {
+                response.append(scanner.nextLine());
+            }
+            return GSON.fromJson(response.toString(), JsonElement.class);
+        } catch (IOException e) {
+            System.out.println("Введен неправильный или несуществующий адрес");
+            throw e;
         }
-        return GSON.fromJson(response.toString(), JsonElement.class);
     }
 
     // Метод для создания строки запроса с нужными параметрами
@@ -112,20 +122,26 @@ public class Main {
     }
 
     // Метод для выполнения GET-запроса, который принимает адрес и возвращает координаты этого адреса в виде строки
-    static String getCoordinates(String address) throws IOException, URISyntaxException {
-        JsonObject addressInfo = doGetRequest(OSM_SEARCH_URL, Map.of(
+    static String getCoordinates(String address) throws Exception {
+        JsonArray addressInfoArray = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", address,
                 "format", "json"
         ))
-                .getAsJsonArray()
-                .get(0)
-                .getAsJsonObject();
-        return addressInfo.getAsJsonPrimitive("lon").getAsString()
-                + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
+                .getAsJsonArray();
+        if (addressInfoArray.isEmpty()) {
+            throw new Exception("Адрес не найден");
+        } else {
+            JsonObject addressInfo = addressInfoArray
+                    .get(0)
+                    .getAsJsonObject();
+
+            return addressInfo.getAsJsonPrimitive("lon").getAsString()
+                    + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
+        }
     }
 
     // Метод для форматирования полученного значения времени
-    static String formatTime (int time) {
+    static String formatTime(int time) {
         String formattedTime;
         if (time % 3600 / 60 == 0) {
             formattedTime = "Продолжительность шага: " + time + " c ";
@@ -138,7 +154,7 @@ public class Main {
     }
 
     // Метод для форматирования полученного значения расстояния
-    static String formatDistance (int distance) {
+    static String formatDistance(int distance) {
         String formattedDistance;
         if (distance / 1000 == 0) {
             formattedDistance = "Расстояние: " + distance + " м ";
