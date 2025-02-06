@@ -1,6 +1,7 @@
 package ru.personal;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -27,8 +28,15 @@ public class Main {
         String addressB = scanner.nextLine();
 
         // Получение координат по адресу
-        String coordinatesA = getCoordinates(addressA);
-        String coordinatesB = getCoordinates(addressB);
+        String coordinatesA = "";
+        String coordinatesB = "";
+
+        try {
+            coordinatesA = getCoordinates(addressA);
+            coordinatesB = getCoordinates(addressB);
+        } catch (Exception e) {
+            System.out.println("Адрес не найден");
+        }
 
         // Запрос GET для получения маршрута по указанным координатам исходной и конечной точек
         // Обработка полученного JsonElement для извлечения из него информации в полях distance и duration
@@ -48,36 +56,18 @@ public class Main {
         int distance = routeSegment.getAsJsonPrimitive("distance").getAsInt();
         int duration = routeSegment.getAsJsonPrimitive("duration").getAsInt();
 
-        if (distance / 1000 == 0) {
-            System.out.println("Длина маршрута: " + distance + " м ");
-        } else {
-            System.out.println("Длина маршрута: " + (float) distance / 1000 + " км ");
-        }
-
-//        System.out.println("Продолжительность маршрута: " + duration / 3600 + " ч " + duration / 60 + " мин");
-        System.out.println("Продолжительность маршрута: " + duration + " c ");
+        System.out.println(formatDistance(distance));
+        System.out.println(formatTime(duration));
 
         // Обработка JsonObject routeSegment для извлечения из него информации в поле steps
-        // Структура routeSegment:
-        // {
-        //    "distance":10566.9,
-        //    "duration":976.2,
-        //    "steps":[
-        //        {"distance":54.7,
-        //        "duration":13.1,
-        //        "type":11,
-        //        "instruction":"Head south","name":"-",
-        //        "way_points":[0,3]}
-        //     ]
-        //  }
-
         for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
-            String stepDuration = step.getAsJsonObject().getAsJsonPrimitive("duration").getAsString();
-            String stepDistance = step.getAsJsonObject().getAsJsonPrimitive("distance").getAsString();
+            int stepDuration = step.getAsJsonObject().getAsJsonPrimitive("duration").getAsInt();
+            int stepDistance = step.getAsJsonObject().getAsJsonPrimitive("distance").getAsInt();
             String stepInstruction = step.getAsJsonObject().getAsJsonPrimitive("instruction").getAsString();
             System.out.println("-------------------------------------");
-            System.out.println("Продолжительность шага: " + stepDuration + " c ");
-            System.out.println("Расстояние: " + stepDistance + " м ");
+
+            System.out.println(formatTime(stepDuration));
+            System.out.println(formatDistance(stepDistance));
             System.out.println("Маршрут: " + stepInstruction);
         }
     }
@@ -88,15 +78,17 @@ public class Main {
 
         final HttpURLConnection connection = (HttpURLConnection) new URI(url + paramString).toURL().openConnection();
         connection.setRequestMethod("GET");
-//        System.out.println(connection.getResponseCode());
-//        System.out.println(connection.getResponseMessage());
-
-        final Scanner scanner = new Scanner(connection.getInputStream());
-        StringBuilder response = new StringBuilder();
-        while (scanner.hasNext()) {
-            response.append(scanner.nextLine());
+        try {
+            final Scanner scanner = new Scanner(connection.getInputStream());
+            StringBuilder response = new StringBuilder();
+            while (scanner.hasNext()) {
+                response.append(scanner.nextLine());
+            }
+            return GSON.fromJson(response.toString(), JsonElement.class);
+        } catch (IOException e) {
+            System.out.println("Введен неправильный или несуществующий адрес");
+            throw e;
         }
-        return GSON.fromJson(response.toString(), JsonElement.class);
     }
 
     // Метод для создания строки запроса с нужными параметрами
@@ -117,15 +109,45 @@ public class Main {
     }
 
     // Метод для выполнения GET-запроса, который принимает адрес и возвращает координаты этого адреса в виде строки
-    static String getCoordinates(String address) throws IOException, URISyntaxException {
-        JsonObject addressInfo = doGetRequest(OSM_SEARCH_URL, Map.of(
+    static String getCoordinates(String address) throws Exception {
+        JsonArray addressInfoArray = doGetRequest(OSM_SEARCH_URL, Map.of(
                 "q", address,
                 "format", "json"
         ))
-                .getAsJsonArray()
-                .get(0)
-                .getAsJsonObject();
-        return addressInfo.getAsJsonPrimitive("lon").getAsString()
-                + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
+                .getAsJsonArray();
+        if (addressInfoArray.isEmpty()) {
+            throw new Exception("Адрес не найден");
+        } else {
+            JsonObject addressInfo = addressInfoArray
+                    .get(0)
+                    .getAsJsonObject();
+
+            return addressInfo.getAsJsonPrimitive("lon").getAsString()
+                    + "," + addressInfo.getAsJsonPrimitive("lat").getAsString();
+        }
+    }
+
+    // Метод для форматирования полученного значения времени
+    static String formatTime(int time) {
+        String formattedTime;
+        if (time % 3600 / 60 == 0) {
+            formattedTime = "Продолжительность шага: " + time + " c ";
+        } else if (time / 3600 == 0) {
+            formattedTime = "Продолжительность шага: " + (time % 3600 / 60) + " мин ";
+        } else {
+            formattedTime = "Продолжительность маршрута: " + time / 3600 + " ч " + (time % 3600 / 60) + " мин";
+        }
+        return formattedTime;
+    }
+
+    // Метод для форматирования полученного значения расстояния
+    static String formatDistance(int distance) {
+        String formattedDistance;
+        if (distance / 1000 == 0) {
+            formattedDistance = "Расстояние: " + distance + " м ";
+        } else {
+            formattedDistance = "Расстояние: " + String.format("%.1f", (float) distance / 1000) + " км ";
+        }
+        return formattedDistance;
     }
 }
