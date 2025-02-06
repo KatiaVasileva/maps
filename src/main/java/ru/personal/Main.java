@@ -60,19 +60,6 @@ public class Main {
         System.out.println(formatTime(duration));
 
         // Обработка JsonObject routeSegment для извлечения из него информации в поле steps
-        // Структура routeSegment:
-        // {
-        //    "distance":10566.9,
-        //    "duration":976.2,
-        //    "steps":[
-        //        {"distance":54.7,
-        //        "duration":13.1,
-        //        "type":11,
-        //        "instruction":"Head south","name":"-",
-        //        "way_points":[0,3]}
-        //     ]
-        //  }
-
         for (JsonElement step : routeSegment.getAsJsonArray("steps")) {
             int stepDuration = step.getAsJsonObject().getAsJsonPrimitive("duration").getAsInt();
             int stepDistance = step.getAsJsonObject().getAsJsonPrimitive("distance").getAsInt();
